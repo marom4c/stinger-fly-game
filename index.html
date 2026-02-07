@@ -22,6 +22,10 @@
       background: linear-gradient(180deg,var(--sky1),var(--sky2));
       color: var(--ui);
       overflow:hidden;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none;
+      overscroll-behavior: none;
     }
     #wrap{
       position: fixed;
@@ -154,6 +158,8 @@
       font-size: 22px;
       font-weight: 800;
       color: #1b2430;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
     }
     .btn:active{transform: scale(0.98);}
     @media (max-width: 900px){
@@ -258,12 +264,22 @@
     // Touch controls
     document.querySelectorAll(".btn[data-key]").forEach(btn => {
       const key = btn.getAttribute("data-key");
-      const down = (e) => { e.preventDefault(); pressKey(key); };
+      const down = (e) => {
+        e.preventDefault();
+        if (btn.setPointerCapture && e.pointerId !== undefined) {
+          btn.setPointerCapture(e.pointerId);
+        }
+        pressKey(key);
+      };
       const up = (e) => { e.preventDefault(); releaseKey(key); };
       btn.addEventListener("pointerdown", down);
       btn.addEventListener("pointerup", up);
       btn.addEventListener("pointercancel", up);
       btn.addEventListener("pointerleave", up);
+      // iOS Safari fallback
+      btn.addEventListener("touchstart", down, { passive: false });
+      btn.addEventListener("touchend", up, { passive: false });
+      btn.addEventListener("touchcancel", up, { passive: false });
     });
 
     saveBtn.addEventListener("click", () => {
