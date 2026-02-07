@@ -230,6 +230,8 @@
     const scoresEl = document.getElementById("scores");
     const scoresLiveEl = document.getElementById("scoresLive");
     const startBtn = document.getElementById("startBtn");
+    const API_URL = "https://script.google.com/macros/s/AKfycbyueIWNOd-_ZDKnyOxKPcL8_9BU4XQsSsauqwCIkR3nu1rQf7wf2WFJlNlHN7A5btCU/exec";
+    const GAME_VERSION = "v1";
 
     const W = canvas.width;
     const H = canvas.height;
@@ -285,7 +287,7 @@
     saveBtn.addEventListener("click", () => {
       if (!running && elapsed >= target) {
         const name = playerName.value.trim() || "Hráč";
-        addScore(name.slice(0, 18), score);
+        submitScore(name.slice(0, 18), score);
         saveScore.style.display = "none";
       }
     });
@@ -322,11 +324,8 @@
     let nextCloud = 0;
     let pickupSchedule = [];
     let nextPickupIndex = 0;
-    let best = Number(localStorage.getItem("stinger_best_score") || "0");
-    let leaderboard = loadLeaderboard();
-    if (!best && leaderboard.length) {
-      best = Math.max(...leaderboard.map(s => s.points));
-    }
+    let best = 0;
+    let leaderboard = [];
 
     function reset(){
       obstacles = [];
@@ -392,17 +391,17 @@
       bestEl.textContent = best ? `Nejlepší skóre: ${best}` : "Nejlepší skóre: —";
     }
 
-    function loadLeaderboard(){
+    function loadLocalLeaderboard(){
       try {
-        const raw = JSON.parse(localStorage.getItem("stinger_scores") || "[]");
+        const raw = JSON.parse(localStorage.getItem("stinger_scores_local") || "[]");
         return raw.filter(s => typeof s.points === "number");
       } catch {
         return [];
       }
     }
 
-    function saveLeaderboard(list){
-      localStorage.setItem("stinger_scores", JSON.stringify(list));
+    function saveLocalLeaderboard(list){
+      localStorage.setItem("stinger_scores_local", JSON.stringify(list));
     }
 
     function renderLeaderboard(){
@@ -427,12 +426,45 @@
       }[m]));
     }
 
-    function addScore(name, points){
+    function addLocalScore(name, points){
       leaderboard.push({ name, points });
       leaderboard.sort((a,b) => b.points - a.points);
       leaderboard = leaderboard.slice(0, 10);
-      saveLeaderboard(leaderboard);
+      saveLocalLeaderboard(leaderboard);
       renderLeaderboard();
+    }
+
+    async function fetchLeaderboard(){
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        leaderboard = Array.isArray(data) ? data.map(r => ({
+          name: r.name || "Hráč",
+          points: Number(r.points || 0)
+        })) : [];
+        best = leaderboard.length ? Math.max(...leaderboard.map(s => s.points)) : 0;
+        renderLeaderboard();
+        updateHud();
+      } catch (e) {
+        // fallback to local cache if offline
+        leaderboard = loadLocalLeaderboard();
+        best = leaderboard.length ? Math.max(...leaderboard.map(s => s.points)) : 0;
+        renderLeaderboard();
+        updateHud();
+      }
+    }
+
+    async function submitScore(name, points){
+      try {
+        await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ name, points, version: GAME_VERSION })
+        });
+        await fetchLeaderboard();
+      } catch (e) {
+        addLocalScore(name, points);
+      }
     }
 
     function buildPickupSchedule(){
@@ -779,7 +811,7 @@
     }
 
     // Initial HUD
-    renderLeaderboard();
+    fetchLeaderboard();
     updateHud();
   </script>
 </body>
