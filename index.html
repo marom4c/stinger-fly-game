@@ -94,6 +94,16 @@
     #panel h1{margin: 6px 0 8px 0; font-size: 26px;}
     #panel p{margin: 6px 0; font-size: 15px;}
     #panel .cta{margin-top: 12px; font-size: 14px;}
+    #startBtn{
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 15px;
+      box-shadow: 0 6px 16px rgba(0,0,0,.18);
+    }
     #scoreboard{margin-top: 12px; text-align:left;}
     #scoreboard h3{margin: 10px 0 6px 0; font-size: 16px;}
     #scoreboard ol{margin: 0 0 6px 18px; padding: 0;}
@@ -173,7 +183,7 @@
   <div id="overlay">
     <div id="panel">
       <h1 id="panelTitle">Stinger – Let krajinou</h1>
-      <p id="panelMsg">Pomoz Stingerovi proletět krajinou co nejrychleji.</p>
+      <p id="panelMsg">Pomoz Stingerovi posbírat loga STINGu a získej tak co nejvíce bodů. Máš na to 40 vteřin. Velké logo je za 200 bodů a malé logo za 100 bodů. Vyhábej se ptákům a domům. Hodně štěstí.</p>
       <p>Šipky: <span class="key">↑</span>/<span class="key">↓</span> výška, <span class="key">←</span>/<span class="key">→</span> rychlost.</p>
       <p>Vyhýbej se domům a ptákům. Sbírej loga Sting. Máš 3 životy.</p>
       <div id="saveScore">
@@ -184,7 +194,9 @@
         <h3>Tabulka rekordů</h3>
         <ol id="scores"></ol>
       </div>
-      <p class="cta">Stiskni <span class="key">Mezerník</span> pro start / restart.</p>
+      <div class="cta">
+        <button id="startBtn">Start</button>
+      </div>
     </div>
   </div>
   <div id="touchControls">
@@ -211,6 +223,7 @@
     const saveBtn = document.getElementById("saveBtn");
     const scoresEl = document.getElementById("scores");
     const scoresLiveEl = document.getElementById("scoresLive");
+    const startBtn = document.getElementById("startBtn");
 
     const W = canvas.width;
     const H = canvas.height;
@@ -237,13 +250,8 @@
     function pressKey(k){ keys.add(k); }
     function releaseKey(k){ keys.delete(k); }
     window.addEventListener("keydown", (e) => {
-      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
+      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) e.preventDefault();
       pressKey(e.key);
-      if (e.key === " ") {
-        // Don't restart while score entry is visible
-        if (overlay.style.display !== "none" && saveScore.style.display === "flex") return;
-        startGame();
-      }
     });
     window.addEventListener("keyup", (e) => releaseKey(e.key));
 
@@ -267,6 +275,12 @@
     });
     playerName.addEventListener("keydown", (e) => {
       if (e.key === "Enter") saveBtn.click();
+    });
+
+    startBtn.addEventListener("click", () => {
+      // Don't start while score entry is visible
+      if (overlay.style.display !== "none" && saveScore.style.display === "flex") return;
+      startGame();
     });
 
     let obstacles = [];
