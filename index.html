@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stinger – Let krajinou</title>
+  <style>
+    :root{
+      --sky1:#7bd3ff;
+      --sky2:#e5f6ff;
+      --ground1:#7ad56f;
+      --ground2:#4fbf54;
+      --ui:#1b2430;
+      --accent:#ffd24a;
+      --danger:#ff4d4d;
+      --panel:#ffffffcc;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      font-family: "Trebuchet MS", "Comic Sans MS", system-ui, sans-serif;
+      background: linear-gradient(180deg,var(--sky1),var(--sky2));
+      color: var(--ui);
+      overflow:hidden;
+    }
+    #wrap{
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding-top: 56px;
+      padding-bottom: 120px;
+    }
+    canvas{
+      width: 1100px;
+      height: 700px;
+      border-radius: 18px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.2);
+      background: linear-gradient(180deg,var(--sky1),var(--sky2));
+    }
+    #hud{
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      pointer-events: none;
+      font-weight: 700;
+    }
+    #sideboard{
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      width: min(220px, 40vw);
+      background: var(--panel);
+      border-radius: 14px;
+      padding: 10px 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.12);
+      font-size: 13px;
+      pointer-events: none;
+    }
+    #sideboard h4{margin: 2px 0 6px 0; font-size: 14px;}
+    #sideboard ol{margin: 0 0 0 16px; padding: 0;}
+    #sideboard li{margin: 4px 0;}
+    .pill{
+      background: var(--panel);
+      padding: 8px 12px;
+      border-radius: 999px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.12);
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      font-size: 14px;
+    }
+    #overlay{
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,.2);
+      backdrop-filter: blur(4px);
+    }
+    #panel{
+      width: min(92vw, 560px);
+      background: white;
+      border-radius: 18px;
+      padding: 20px 22px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+      text-align: center;
+    }
+    #panel h1{margin: 6px 0 8px 0; font-size: 26px;}
+    #panel p{margin: 6px 0; font-size: 15px;}
+    #panel .cta{margin-top: 12px; font-size: 14px;}
+    #scoreboard{margin-top: 12px; text-align:left;}
+    #scoreboard h3{margin: 10px 0 6px 0; font-size: 16px;}
+    #scoreboard ol{margin: 0 0 6px 18px; padding: 0;}
+    #scoreboard li{font-size: 14px; margin: 4px 0;}
+    #saveScore{margin-top: 10px; display: none; gap: 8px; justify-content: center;}
+    #saveScore input{
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      min-width: 200px;
+      font-size: 14px;
+    }
+    #saveScore button{
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .key{display:inline-block; padding:2px 8px; border-radius:6px; background:#f2f2f2; font-weight:700;}
+    #touchControls{
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      pointer-events: auto;
+      user-select: none;
+      touch-action: none;
+    }
+    .pad{
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: 1fr;
+      gap: 10px;
+      width: 100%;
+    }
+    .btn{
+      width: 100%;
+      height: clamp(48px, 16vw, 72px);
+      border-radius: 14px;
+      border: none;
+      background: rgba(255,255,255,0.85);
+      box-shadow: 0 6px 16px rgba(0,0,0,.18);
+      font-size: 22px;
+      font-weight: 800;
+      color: #1b2430;
+    }
+    .btn:active{transform: scale(0.98);}
+    @media (max-width: 900px){
+      #touchControls{display: flex; left: 12px; right: 12px;}
+      #hud{flex-wrap: wrap; gap: 8px;}
+      #sideboard{
+        top: 12px;
+        bottom: auto;
+        width: min(220px, 60vw);
+      }
+      #wrap{padding-top: 72px; padding-bottom: 180px;}
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap"><canvas id="game" width="1100" height="700" aria-label="Stinger game"></canvas></div>
+  <div id="hud">
+    <div class="pill" id="status">Čas: 0.0 s • Zbývá: 40.0 s</div>
+    <div class="pill" id="score">Skóre: 0</div>
+    <div class="pill" id="lives">Životy: 3</div>
+    <div class="pill" id="best">Nejlepší skóre: —</div>
+  </div>
+  <div id="sideboard">
+    <h4>Top 5</h4>
+    <ol id="scoresLive"></ol>
+  </div>
+  <div id="overlay">
+    <div id="panel">
+      <h1 id="panelTitle">Stinger – Let krajinou</h1>
+      <p id="panelMsg">Pomoz Stingerovi proletět krajinou co nejrychleji.</p>
+      <p>Šipky: <span class="key">↑</span>/<span class="key">↓</span> výška, <span class="key">←</span>/<span class="key">→</span> rychlost.</p>
+      <p>Vyhýbej se domům a ptákům. Sbírej loga Sting. Máš 3 životy.</p>
+      <div id="saveScore">
+        <input id="playerName" maxlength="18" placeholder="Tvoje jméno" />
+        <button id="saveBtn">Uložit rekord</button>
+      </div>
+      <div id="scoreboard">
+        <h3>Tabulka rekordů</h3>
+        <ol id="scores"></ol>
+      </div>
+      <p class="cta">Stiskni <span class="key">Mezerník</span> pro start / restart.</p>
+    </div>
+  </div>
+  <div id="touchControls">
+    <div class="pad">
+      <button class="btn" data-key="ArrowLeft">←</button>
+      <button class="btn" data-key="ArrowDown">↓</button>
+      <button class="btn" data-key="ArrowUp">↑</button>
+      <button class="btn" data-key="ArrowRight">→</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const statusEl = document.getElementById("status");
+    const scoreEl = document.getElementById("score");
+    const livesEl = document.getElementById("lives");
+    const bestEl = document.getElementById("best");
+    const overlay = document.getElementById("overlay");
+    const panelTitle = document.getElementById("panelTitle");
+    const panelMsg = document.getElementById("panelMsg");
+    const saveScore = document.getElementById("saveScore");
+    const playerName = document.getElementById("playerName");
+    const saveBtn = document.getElementById("saveBtn");
+    const scoresEl = document.getElementById("scores");
+    const scoresLiveEl = document.getElementById("scoresLive");
+
+    const W = canvas.width;
+    const H = canvas.height;
+    const groundY = H * 0.78;
+
+    function fitCanvas(){
+      const maxW = window.innerWidth;
+      const maxH = window.innerHeight - 160; // leave room for HUD + controls
+      const scale = Math.min(maxW / W, maxH / H);
+      canvas.style.width = Math.floor(W * scale) + "px";
+      canvas.style.height = Math.floor(H * scale) + "px";
+    }
+    window.addEventListener("resize", fitCanvas);
+    fitCanvas();
+
+    const img = new Image();
+    img.src = "stinger.png";
+    const smallLogo = new Image();
+    smallLogo.src = "small_logo.png";
+    const bigLogo = new Image();
+    bigLogo.src = "big_logo.png";
+
+    const keys = new Set();
+    function pressKey(k){ keys.add(k); }
+    function releaseKey(k){ keys.delete(k); }
+    window.addEventListener("keydown", (e) => {
+      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
+      pressKey(e.key);
+      if (e.key === " ") {
+        // Don't restart while score entry is visible
+        if (overlay.style.display !== "none" && saveScore.style.display === "flex") return;
+        startGame();
+      }
+    });
+    window.addEventListener("keyup", (e) => releaseKey(e.key));
+
+    // Touch controls
+    document.querySelectorAll(".btn[data-key]").forEach(btn => {
+      const key = btn.getAttribute("data-key");
+      const down = (e) => { e.preventDefault(); pressKey(key); };
+      const up = (e) => { e.preventDefault(); releaseKey(key); };
+      btn.addEventListener("pointerdown", down);
+      btn.addEventListener("pointerup", up);
+      btn.addEventListener("pointercancel", up);
+      btn.addEventListener("pointerleave", up);
+    });
+
+    saveBtn.addEventListener("click", () => {
+      if (!running && elapsed >= target) {
+        const name = playerName.value.trim() || "Hráč";
+        addScore(name.slice(0, 18), score);
+        saveScore.style.display = "none";
+      }
+    });
+    playerName.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") saveBtn.click();
+    });
+
+    let obstacles = [];
+    let clouds = [];
+    let birds = [];
+    let pickups = [];
+    let trees = [];
+    let t = 0;
+    let last = 0;
+    let running = false;
+    let elapsed = 0;
+    let target = 40;
+    let score = 0;
+    let lives = 3;
+    let speed = 260; // px/sec
+    let baseSpeed = 260;
+    let y = H * 0.4;
+    let invuln = 0;
+    let difficulty = 0;
+    let distance = 0;
+    let nextGate = 0;
+    let nextBird = 0;
+    let nextCloud = 0;
+    let pickupSchedule = [];
+    let nextPickupIndex = 0;
+    let best = Number(localStorage.getItem("stinger_best_score") || "0");
+    let leaderboard = loadLeaderboard();
+    if (!best && leaderboard.length) {
+      best = Math.max(...leaderboard.map(s => s.points));
+    }
+
+    function reset(){
+      obstacles = [];
+      clouds = [];
+      birds = [];
+      pickups = [];
+      trees = [];
+      t = 0;
+      elapsed = 0;
+      score = 0;
+      lives = 3;
+      speed = 260;
+      baseSpeed = 260;
+      y = H * 0.4;
+      invuln = 0;
+      difficulty = 0;
+      distance = 0;
+      nextGate = 0;
+      nextBird = 0;
+      nextCloud = 0;
+      pickupSchedule = buildPickupSchedule();
+      nextPickupIndex = 0;
+      last = performance.now();
+      updateHud();
+    }
+
+    function startGame(){
+      if (running) return;
+      reset();
+      running = true;
+      overlay.style.display = "none";
+      requestAnimationFrame(loop);
+    }
+
+    function endGame(won){
+      running = false;
+      overlay.style.display = "grid";
+      if (won) {
+        panelTitle.textContent = "Hotovo!";
+        panelMsg.textContent = `Vydržel jsi 40 s a získal ${score} bodů.`;
+        saveScore.style.display = "flex";
+        playerName.value = "";
+        playerName.focus();
+        if (!best || score > best) {
+          best = score;
+          localStorage.setItem("stinger_best_score", String(best));
+        }
+      } else {
+        panelTitle.textContent = "Zkus to znovu";
+        panelMsg.textContent = "Došly životy.";
+        saveScore.style.display = "none";
+      }
+      renderLeaderboard();
+      updateHud();
+    }
+
+    function updateHud(){
+      const remaining = Math.max(0, target - elapsed);
+      statusEl.textContent = `Čas: ${elapsed.toFixed(1)} s • Zbývá: ${remaining.toFixed(1)} s`;
+      scoreEl.textContent = `Skóre: ${score}`;
+      const hearts = "❤".repeat(lives) + "♡".repeat(Math.max(0, 3 - lives));
+      livesEl.textContent = `Životy: ${lives} ${hearts}`;
+      bestEl.textContent = best ? `Nejlepší skóre: ${best}` : "Nejlepší skóre: —";
+    }
+
+    function loadLeaderboard(){
+      try {
+        const raw = JSON.parse(localStorage.getItem("stinger_scores") || "[]");
+        return raw.filter(s => typeof s.points === "number");
+      } catch {
+        return [];
+      }
+    }
+
+    function saveLeaderboard(list){
+      localStorage.setItem("stinger_scores", JSON.stringify(list));
+    }
+
+    function renderLeaderboard(){
+      if (!leaderboard.length) {
+        scoresEl.innerHTML = "<li>Žádné rekordy zatím nejsou.</li>";
+        scoresLiveEl.innerHTML = "<li>—</li>";
+        return;
+      }
+      const top10 = leaderboard.slice(0, 10);
+      scoresEl.innerHTML = top10
+        .map(s => `<li><strong>${escapeHtml(s.name)}</strong> – ${s.points} bodů</li>`)
+        .join("");
+      const top5 = leaderboard.slice(0, 5);
+      scoresLiveEl.innerHTML = top5
+        .map(s => `<li><strong>${escapeHtml(s.name)}</strong> – ${s.points}</li>`)
+        .join("");
+    }
+
+    function escapeHtml(str){
+      return str.replace(/[&<>"']/g, m => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+      }[m]));
+    }
+
+    function addScore(name, points){
+      leaderboard.push({ name, points });
+      leaderboard.sort((a,b) => b.points - a.points);
+      leaderboard = leaderboard.slice(0, 10);
+      saveLeaderboard(leaderboard);
+      renderLeaderboard();
+    }
+
+    function buildPickupSchedule(){
+      // Fixed total possible points each game
+      const schedule = [];
+      const totalSmall = 20; // 20 * 100 = 2000
+      const totalBig = 10;   // 10 * 200 = 2000
+      const total = totalSmall + totalBig;
+      const start = 3;
+      const end = target - 3;
+      const step = (end - start) / (total - 1);
+      const kinds = Array(totalSmall).fill("small").concat(Array(totalBig).fill("big"));
+      // simple shuffle for variety (same count each game)
+      for (let i = kinds.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [kinds[i], kinds[j]] = [kinds[j], kinds[i]];
+      }
+      for (let i = 0; i < total; i++) {
+        schedule.push({
+          time: start + i * step,
+          kind: kinds[i]
+        });
+      }
+      return schedule;
+    }
+
+    function findPickupY(size, x){
+      const top = 50;
+      const bottom = groundY - 120;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        let y = top + Math.random() * (bottom - top);
+        let ok = true;
+        for (const o of obstacles) {
+          const overlapX = x + size * 0.6 > o.x && x - size * 0.6 < o.x + o.w;
+          if (overlapX && y + size * 0.6 > o.y) {
+            y = Math.max(top, o.y - size * 0.8);
+          }
+          if (overlapX && y + size * 0.6 > o.y) {
+            ok = false;
+            break;
+          }
+        }
+        if (ok) return y;
+      }
+      return top + (bottom - top) * 0.25;
+    }
+
+    function spawnBuildingBlock(){
+      // City-like block: low buildings + high-rises + skyscrapers
+      let x = W + 60;
+      const buildings = 3 + Math.floor(Math.random() * 3); // 3-5
+      for (let i = 0; i < buildings; i++) {
+        const w = 40 + Math.random() * 60;
+        const roll = Math.random();
+        let h;
+        if (roll < 0.55) h = 60 + Math.random() * 90;          // low
+        else if (roll < 0.85) h = 130 + Math.random() * 140;    // high-rise
+        else h = 240 + Math.random() * 180;                     // skyscraper
+        const color = ["#ffb347", "#ffd56b", "#f49b6b", "#f7c1a5", "#f6d6a8"][Math.floor(Math.random()*5)];
+        obstacles.push({
+          x, y: groundY - h, w, h,
+          type: "building",
+          color,
+          windows: roll < 0.85 ? true : true,
+          skylines: roll >= 0.85
+        });
+        // Add a small tree in the gap after some buildings
+        const gap = 8 + Math.random() * 14;
+        if (Math.random() < 0.7) {
+          const tx = x + w + gap * 0.5;
+          const th = 16 + Math.random() * 10;
+          trees.push({ x: tx, y: groundY, h: th });
+        }
+        x += w + gap;
+      }
+    }
+
+    function spawn(){
+      // Distance-based spawning for consistent difficulty
+      if (distance > nextGate) {
+        spawnBuildingBlock();
+        const base = 520 - difficulty * 140;
+        nextGate = distance + (base + Math.random() * 320);
+      }
+
+      if (distance > nextBird) {
+        // Spawn a small flock (more birds, but less often)
+        const count = 2 + Math.floor(Math.random() * 2); // 2-3 birds
+        const baseY = 60 + Math.random() * (groundY - 180);
+        for (let i = 0; i < count; i++) {
+          const size = 22 + Math.random() * 10;
+          birds.push({
+            x: W + 120 + i * (60 + Math.random() * 40),
+            y: Math.max(40, Math.min(groundY - 80, baseY + (Math.random() * 80 - 40))),
+            vx: 70 + Math.random() * 70,
+            size
+          });
+        }
+        const base = 620 - difficulty * 160;
+        nextBird = distance + (base + Math.random() * 300);
+      }
+
+      while (nextPickupIndex < pickupSchedule.length && elapsed >= pickupSchedule[nextPickupIndex].time) {
+        const item = pickupSchedule[nextPickupIndex];
+        const isBig = item.kind === "big";
+        const size = isBig ? 36 : 24;
+        const x = W + 80;
+        pickups.push({
+          x,
+          y: findPickupY(size, x),
+          size,
+          value: isBig ? 200 : 100,
+          kind: item.kind
+        });
+        nextPickupIndex += 1;
+      }
+
+      if (distance > nextCloud) {
+        const r = 28 + Math.random() * 25;
+        clouds.push({ x: W + r, y: 60 + Math.random() * 240, r });
+        nextCloud = distance + 260 + Math.random() * 200;
+      }
+    }
+
+    function update(dt){
+      t += dt;
+      elapsed += dt;
+      difficulty = Math.min(1, elapsed / 60); // ramp over first minute
+
+      // Controls
+      if (keys.has("ArrowUp")) y -= 260 * dt;
+      if (keys.has("ArrowDown")) y += 260 * dt;
+      if (keys.has("ArrowLeft")) speed = Math.max(140, speed - 240 * dt);
+      if (keys.has("ArrowRight")) speed = Math.min(520, speed + 240 * dt);
+
+      // Ease speed toward base for gentle feel
+      baseSpeed = 260 + difficulty * 120;
+      speed += (baseSpeed - speed) * 0.25 * dt;
+
+      y = Math.max(20, Math.min(groundY - 20, y));
+
+      distance += speed * dt;
+      spawn();
+
+      obstacles.forEach(o => o.x -= speed * dt);
+      clouds.forEach(c => c.x -= speed * dt * 0.7);
+      birds.forEach(b => b.x -= (speed + b.vx) * dt);
+      pickups.forEach(p => p.x -= speed * dt);
+      trees.forEach(t => t.x -= speed * dt);
+
+      obstacles = obstacles.filter(o => o.x + o.w > -20);
+      clouds = clouds.filter(c => c.x + c.r > -20);
+      birds = birds.filter(b => b.x > -60);
+      pickups = pickups.filter(p => p.x + p.size > -40);
+      trees = trees.filter(t => t.x > -20);
+
+      if (invuln > 0) invuln -= dt;
+
+      // Collisions
+      const bx = W * 0.2;
+      const by = y;
+      const br = 34;
+
+      for (const o of obstacles) {
+        if (circleRectCollide(bx, by, br, o.x, o.y, o.w, o.h)) hit();
+      }
+      for (const b of birds) {
+        if (dist(bx, by, b.x, b.y) < br + b.size) hit();
+      }
+      for (const p of pickups) {
+        if (dist(bx, by, p.x, p.y) < br + p.size * 0.6) {
+          score += p.value;
+          p.collected = true;
+        }
+      }
+      pickups = pickups.filter(p => !p.collected);
+
+      if (elapsed >= target) endGame(true);
+    }
+
+    function hit(){
+      if (invuln > 0) return;
+      lives -= 1;
+      invuln = 1.2;
+      if (lives <= 0) endGame(false);
+    }
+
+    function loop(ts){
+      if (!running) return;
+      const dt = Math.min(0.033, (ts - last) / 1000);
+      last = ts;
+      update(dt);
+      render();
+      updateHud();
+      requestAnimationFrame(loop);
+    }
+
+    function render(){
+      // Sky background
+      const grad = ctx.createLinearGradient(0,0,0,H);
+      grad.addColorStop(0, "#7bd3ff");
+      grad.addColorStop(1, "#e5f6ff");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0,0,W,H);
+
+      // Sun
+      ctx.fillStyle = "#ffd24a";
+      ctx.beginPath();
+      ctx.arc(W*0.85, H*0.15, 50, 0, Math.PI*2);
+      ctx.fill();
+
+      // Ground
+      const g = ctx.createLinearGradient(0, groundY, 0, H);
+      g.addColorStop(0, "#7ad56f");
+      g.addColorStop(1, "#4fbf54");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, groundY, W, H-groundY);
+
+      // Clouds
+      ctx.fillStyle = "#ffffff";
+      clouds.forEach(c => {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.r, 0, Math.PI*2);
+        ctx.arc(c.x - c.r*0.9, c.y + 6, c.r*0.7, 0, Math.PI*2);
+        ctx.arc(c.x + c.r*0.8, c.y + 8, c.r*0.8, 0, Math.PI*2);
+        ctx.fill();
+      });
+
+      // Buildings (city look)
+      obstacles.forEach(o => {
+        ctx.fillStyle = o.color;
+        ctx.fillRect(o.x, o.y, o.w, o.h);
+
+        // windows
+        const winW = o.h > 220 ? 6 : 5;
+        const winH = o.h > 220 ? 10 : 8;
+        const gapX = o.h > 220 ? 10 : 9;
+        const gapY = o.h > 220 ? 14 : 12;
+        ctx.fillStyle = "rgba(0,0,0,0.18)";
+        for (let yy = o.y + 10; yy < o.y + o.h - 12; yy += gapY) {
+          for (let xx = o.x + 8; xx < o.x + o.w - 10; xx += gapX) {
+            ctx.fillRect(xx, yy, winW, winH);
+          }
+        }
+
+        if (o.skylines) {
+          ctx.fillStyle = "rgba(0,0,0,0.25)";
+          ctx.fillRect(o.x + o.w * 0.4, o.y - 8, o.w * 0.2, 8);
+        }
+      });
+
+      // Trees between buildings
+      trees.forEach(t => {
+        ctx.fillStyle = "#6b4f2a";
+        ctx.fillRect(t.x - 2, t.y - t.h, 4, t.h);
+        ctx.fillStyle = "#3aa856";
+        ctx.beginPath();
+        ctx.arc(t.x, t.y - t.h, t.h * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Birds (larger silhouettes)
+      birds.forEach(b => {
+        const s = b.size;
+        ctx.fillStyle = "#1f1f1f";
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, s * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#1f1f1f";
+        ctx.lineWidth = Math.max(3, s * 0.18);
+        ctx.beginPath();
+        ctx.moveTo(b.x - s * 1.1, b.y + s * 0.1);
+        ctx.quadraticCurveTo(b.x - s * 0.2, b.y - s * 0.9, b.x, b.y);
+        ctx.quadraticCurveTo(b.x + s * 0.2, b.y - s * 0.9, b.x + s * 1.1, b.y + s * 0.1);
+        ctx.stroke();
+      });
+
+      // Pickups (logos)
+      pickups.forEach(p => {
+        const s = p.size;
+        const imgRef = p.kind === "big" ? bigLogo : smallLogo; // uses small_logo.png for small
+        if (imgRef.complete && imgRef.naturalWidth > 0) {
+          ctx.drawImage(imgRef, p.x - s/2, p.y - s/2, s, s);
+        } else {
+          ctx.fillStyle = "#ffd24a";
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, s/2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#1b2430";
+          ctx.font = `${Math.max(10, s*0.45)}px Arial`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("S", p.x, p.y);
+        }
+      });
+
+      // Stinger
+      const bx = W * 0.2;
+      const by = y;
+      if (img.complete && img.naturalWidth > 0) {
+        const w = 150;
+        const h = 150 * (img.naturalHeight / img.naturalWidth);
+        ctx.globalAlpha = invuln > 0 ? 0.55 + 0.45*Math.sin(t*20) : 1;
+        ctx.drawImage(img, bx - w/2, by - h/2, w, h);
+        ctx.globalAlpha = 1;
+      } else {
+        // fallback simple bee
+        ctx.fillStyle = "#ffd24a";
+        ctx.beginPath();
+        ctx.arc(bx, by, 30, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = "#333";
+        ctx.fillRect(bx-25, by-6, 50, 6);
+        ctx.fillRect(bx-25, by+6, 50, 6);
+      }
+
+      // Finish line indicator
+      const progress = elapsed / target;
+      const fx = W - 40;
+      ctx.fillStyle = "rgba(0,0,0,0.1)";
+      ctx.fillRect(fx, 0, 16, H);
+      ctx.fillStyle = "#fff";
+      for (let i=0;i<12;i++){
+        ctx.fillRect(fx, i*60 + (i%2?0:12), 16, 20);
+      }
+
+      // Progress bar
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.fillRect(20, H-28, W-40, 10);
+      ctx.fillStyle = "#ffd24a";
+      ctx.fillRect(20, H-28, (W-40)*Math.min(1,progress), 10);
+    }
+
+    function circleRectCollide(cx, cy, r, rx, ry, rw, rh) {
+      const nx = Math.max(rx, Math.min(cx, rx + rw));
+      const ny = Math.max(ry, Math.min(cy, ry + rh));
+      const dx = cx - nx;
+      const dy = cy - ny;
+      return dx*dx + dy*dy <= r*r;
+    }
+    function dist(ax, ay, bx, by){
+      const dx = ax-bx, dy = ay-by;
+      return Math.sqrt(dx*dx + dy*dy);
+    }
+
+    // Initial HUD
+    renderLeaderboard();
+    updateHud();
+  </script>
+</body>
+</html>
