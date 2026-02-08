@@ -36,8 +36,10 @@
       padding-bottom: 120px;
     }
     canvas{
-      width: 1100px;
-      height: 700px;
+      width: min(100vw, 1100px);
+      height: auto;
+      aspect-ratio: 1100 / 700;
+      max-height: calc(100dvh - 260px);
       border-radius: 18px;
       box-shadow: 0 18px 60px rgba(0,0,0,.2);
       background: linear-gradient(180deg,var(--sky1),var(--sky2));
@@ -240,22 +242,7 @@
     const H = canvas.height;
     const groundY = H * 0.78;
 
-    function getViewportHeight(){
-      return (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
-    }
-    function fitCanvas(){
-      const maxW = window.innerWidth;
-      const maxH = getViewportHeight() - 180; // leave room for HUD + controls
-      const scale = Math.min(maxW / W, maxH / H);
-      canvas.style.width = Math.floor(W * scale) + "px";
-      canvas.style.height = Math.floor(H * scale) + "px";
-    }
-    window.addEventListener("resize", fitCanvas);
-    window.addEventListener("orientationchange", () => setTimeout(fitCanvas, 200));
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", fitCanvas);
-    }
-    fitCanvas();
+    // Canvas scales via CSS aspect-ratio (more stable on mobile)
 
     const img = new Image();
     img.src = "stinger.png";
@@ -300,7 +287,6 @@
         submitScore(name.slice(0, 18), score);
         saveScore.style.display = "none";
         playerName.blur();
-        setTimeout(fitCanvas, 100);
       }
     });
     playerName.addEventListener("keydown", (e) => {
@@ -371,7 +357,6 @@
       overlay.style.display = "none";
       if (document.activeElement) document.activeElement.blur();
       window.scrollTo(0,0);
-      setTimeout(fitCanvas, 50);
       requestAnimationFrame(loop);
     }
 
@@ -482,7 +467,7 @@
           });
         }
         // refresh leaderboard after a short delay
-        setTimeout(() => { fetchLeaderboard(); fitCanvas(); }, 600);
+        setTimeout(() => { fetchLeaderboard(); }, 600);
       } catch (e) {
         addLocalScore(name, points);
       }
