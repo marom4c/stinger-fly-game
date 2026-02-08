@@ -79,6 +79,7 @@
       align-items: center;
       font-size: 14px;
     }
+    .pill.wide{flex: 1 1 100%;}
     #overlay{
       position: fixed;
       inset: 0;
@@ -164,8 +165,9 @@
     .btn:active{transform: scale(0.98);}
     @media (max-width: 900px){
       #touchControls{display: flex; left: 12px; right: 12px;}
-      #hud{flex-direction: column; align-items: stretch; gap: 8px;}
-      #hud .pill{justify-content: space-between;}
+      #hud{flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 8px;}
+      #hud .pill{justify-content: space-between; flex: 1 1 calc(50% - 8px);}
+      #hud .pill.wide{flex-basis: 100%;}
       #sideboard{
         top: calc(12px + env(safe-area-inset-top) + 160px);
         right: 12px;
@@ -180,10 +182,9 @@
 <body>
   <div id="wrap"><canvas id="game" width="1100" height="700" aria-label="Stinger game"></canvas></div>
   <div id="hud">
-    <div class="pill" id="status">Čas: 0.0 s • Zbývá: 40.0 s</div>
+    <div class="pill wide" id="status">Čas: 0.0 s • Zbývá: 40.0 s</div>
     <div class="pill" id="score">Skóre: 0</div>
     <div class="pill" id="lives">Životy: 3</div>
-    <div class="pill" id="best">Nejlepší skóre: —</div>
   </div>
   <div id="sideboard">
     <h4>Top 5</h4>
@@ -223,7 +224,6 @@
     const statusEl = document.getElementById("status");
     const scoreEl = document.getElementById("score");
     const livesEl = document.getElementById("lives");
-    const bestEl = document.getElementById("best");
     const overlay = document.getElementById("overlay");
     const panelTitle = document.getElementById("panelTitle");
     const panelMsg = document.getElementById("panelMsg");
@@ -398,7 +398,6 @@
       scoreEl.textContent = `Skóre: ${score}`;
       const hearts = "❤".repeat(lives) + "♡".repeat(Math.max(0, 3 - lives));
       livesEl.textContent = `Životy: ${lives} ${hearts}`;
-      bestEl.textContent = best ? `Nejlepší skóre: ${best}` : "Nejlepší skóre: —";
     }
 
     function loadLocalLeaderboard(){
