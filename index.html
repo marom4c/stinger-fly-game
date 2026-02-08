@@ -44,7 +44,7 @@
     }
     #hud{
       position: fixed;
-      top: 12px;
+      top: calc(12px + env(safe-area-inset-top));
       left: 12px;
       right: 12px;
       display: flex;
@@ -56,7 +56,7 @@
     }
     #sideboard{
       position: fixed;
-      top: 12px;
+      top: calc(56px + env(safe-area-inset-top));
       right: 12px;
       width: min(220px, 40vw);
       background: var(--panel);
@@ -164,15 +164,16 @@
     .btn:active{transform: scale(0.98);}
     @media (max-width: 900px){
       #touchControls{display: flex; left: 12px; right: 12px;}
-      #hud{flex-wrap: wrap; gap: 8px;}
+      #hud{flex-direction: column; align-items: stretch; gap: 8px;}
+      #hud .pill{justify-content: space-between;}
       #sideboard{
-        top: 72px;
-        right: auto;
+        top: calc(12px + env(safe-area-inset-top) + 160px);
+        right: 12px;
         left: 12px;
-        width: min(260px, 80vw);
+        width: auto;
         font-size: 12px;
       }
-      #wrap{padding-top: 120px; padding-bottom: 180px;}
+      #wrap{padding-top: 240px; padding-bottom: 180px;}
     }
   </style>
 </head>
@@ -445,8 +446,7 @@
 
     async function fetchLeaderboard(){
       try {
-        const res = await fetch(API_URL);
-        const data = await res.json();
+        const data = await jsonp(API_URL);
         leaderboard = Array.isArray(data) ? data.map(r => ({
           name: r.name || "Hráč",
           points: Number(r.points || 0)
@@ -465,15 +465,44 @@
 
     async function submitScore(name, points){
       try {
-        await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ name, points, version: GAME_VERSION })
-        });
-        await fetchLeaderboard();
+        const payload = JSON.stringify({ name, points, version: GAME_VERSION });
+        if (navigator.sendBeacon) {
+          const blob = new Blob([payload], { type: "text/plain" });
+          navigator.sendBeacon(API_URL, blob);
+        } else {
+          await fetch(API_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: payload
+          });
+        }
+        // refresh leaderboard after a short delay
+        setTimeout(fetchLeaderboard, 600);
       } catch (e) {
         addLocalScore(name, points);
       }
+    }
+
+    function jsonp(url){
+      return new Promise((resolve, reject) => {
+        const cb = "stinger_cb_" + Math.random().toString(36).slice(2);
+        window[cb] = (data) => {
+          resolve(data);
+          cleanup();
+        };
+        const script = document.createElement("script");
+        script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb;
+        script.onerror = () => {
+          reject(new Error("JSONP load failed"));
+          cleanup();
+        };
+        document.body.appendChild(script);
+        function cleanup(){
+          delete window[cb];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+      });
     }
 
     function buildPickupSchedule(){
