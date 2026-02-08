@@ -166,11 +166,13 @@
       #touchControls{display: flex; left: 12px; right: 12px;}
       #hud{flex-wrap: wrap; gap: 8px;}
       #sideboard{
-        top: 12px;
-        bottom: auto;
-        width: min(220px, 60vw);
+        top: 72px;
+        right: auto;
+        left: 12px;
+        width: min(260px, 80vw);
+        font-size: 12px;
       }
-      #wrap{padding-top: 72px; padding-bottom: 180px;}
+      #wrap{padding-top: 120px; padding-bottom: 180px;}
     }
   </style>
 </head>
@@ -237,14 +239,21 @@
     const H = canvas.height;
     const groundY = H * 0.78;
 
+    function getViewportHeight(){
+      return (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
+    }
     function fitCanvas(){
       const maxW = window.innerWidth;
-      const maxH = window.innerHeight - 160; // leave room for HUD + controls
+      const maxH = getViewportHeight() - 180; // leave room for HUD + controls
       const scale = Math.min(maxW / W, maxH / H);
       canvas.style.width = Math.floor(W * scale) + "px";
       canvas.style.height = Math.floor(H * scale) + "px";
     }
     window.addEventListener("resize", fitCanvas);
+    window.addEventListener("orientationchange", () => setTimeout(fitCanvas, 200));
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", fitCanvas);
+    }
     fitCanvas();
 
     const img = new Image();
