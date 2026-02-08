@@ -119,7 +119,7 @@
       border-radius: 8px;
       border: 1px solid #ddd;
       min-width: 200px;
-      font-size: 14px;
+      font-size: 16px; /* prevent iOS zoom */
     }
     #saveScore button{
       padding: 6px 10px;
@@ -299,6 +299,8 @@
         const name = playerName.value.trim() || "Hráč";
         submitScore(name.slice(0, 18), score);
         saveScore.style.display = "none";
+        playerName.blur();
+        setTimeout(fitCanvas, 100);
       }
     });
     playerName.addEventListener("keydown", (e) => {
@@ -367,6 +369,9 @@
       reset();
       running = true;
       overlay.style.display = "none";
+      if (document.activeElement) document.activeElement.blur();
+      window.scrollTo(0,0);
+      setTimeout(fitCanvas, 50);
       requestAnimationFrame(loop);
     }
 
@@ -477,7 +482,7 @@
           });
         }
         // refresh leaderboard after a short delay
-        setTimeout(fetchLeaderboard, 600);
+        setTimeout(() => { fetchLeaderboard(); fitCanvas(); }, 600);
       } catch (e) {
         addLocalScore(name, points);
       }
